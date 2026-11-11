@@ -220,6 +220,9 @@ It contains the following properties:
 - `command`: a stripped down version of [`Command`](#command), including only `name`, `command`, `env` and `cwd` properties.
 - `index`: the index of the command among all commands spawned.
 - `killed`: whether the command exited because it was killed.
+- `killedByOthers`: whether the command was killed because another command exited,
+  e.g. because of `--kill-others`. These commands are not considered failures when
+  the success condition is evaluated, since they didn't fail on their own.
 - `exitCode`: the exit code of the command's process, or the signal which it was killed with.
 - `timings`: an object in the shape `{ startDate, endDate, durationSeconds }`.
 

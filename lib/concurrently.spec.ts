@@ -9,6 +9,7 @@ import { createFakeProcess, FakeCommand } from './__fixtures__/fake-command.js';
 import { ChildProcess, KillProcess, SpawnCommand } from './command.js';
 import { concurrently, ConcurrentlyCommandInput, ConcurrentlyOptions } from './concurrently.js';
 import { FlowController } from './flow-control/flow-controller.js';
+import { KillOthers } from './flow-control/kill-others.js';
 import { Logger } from './logger.js';
 
 let spawn: SpawnCommand;
@@ -446,4 +447,35 @@ it('rejects if onFinish hooks reject', async () => {
     processes[1].emit('close', 0, null);
 
     await expect(result).rejects.toBe('error');
+});
+
+it('succeeds when the remaining processes are killed by --kill-others', async () => {
+    // See #531: a process killed because another one exited is not a failure.
+    // Use the real KillOthers controller, and make killing emit the close event that
+    // a process killed by a signal would emit.
+    const killedProcesses: ChildProcess[] = [];
+    kill = vi.fn((pid) => {
+        const process = processes.find((candidate) => candidate.pid === pid);
+        if (process) {
+            killedProcesses.push(process);
+            process.emit('close', null, 'SIGTERM');
+        }
+    });
+    // Call `concurrently` directly, since `create` would override the controllers.
+    const { result } = concurrently(['foo', 'bar'], {
+        spawn,
+        kill,
+        controllers: [
+            new KillOthers({
+                logger: createMockInstance(Logger),
+                conditions: ['success', 'failure'],
+                killSignal: undefined,
+            }),
+        ],
+    });
+
+    processes[0].emit('close', 0, null);
+
+    await expect(result).resolves.toBeDefined();
+    expect(killedProcesses).toEqual([processes[1]]);
 });

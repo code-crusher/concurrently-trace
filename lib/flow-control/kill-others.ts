@@ -64,7 +64,7 @@ export class KillOthers implements FlowController {
                     this.logger.logGlobalEvent(
                         `Sending ${this.killSignal || 'SIGTERM'} to other processes..`,
                     );
-                    killableCommands.forEach((command) => command.kill(this.killSignal));
+                    killableCommands.forEach((command) => command.kill(this.killSignal, true));
                     this.maybeForceKill(killableCommands);
                 }
             }),
@@ -85,7 +85,7 @@ export class KillOthers implements FlowController {
                 this.logger.logGlobalEvent(
                     `Sending SIGKILL to ${killableCommands.length} processes..`,
                 );
-                killableCommands.forEach((command) => command.kill('SIGKILL'));
+                killableCommands.forEach((command) => command.kill('SIGKILL', true));
             }
         }, this.timeoutMs).unref();
     }

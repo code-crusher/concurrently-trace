@@ -69,6 +69,14 @@ export interface CloseEvent {
     killed: boolean;
 
     /**
+     * Whether the command was killed because another command exited, e.g. by `--kill-others`.
+     *
+     * Unlike a command that was killed by a signal sent to concurrently itself, these commands
+     * didn't fail on their own, so their exit code shouldn't count as a failure.
+     */
+    killedByOthers: boolean;
+
+    /**
      * The exit code or signal for the command.
      */
     exitCode: string | number;
@@ -170,6 +178,7 @@ export class Command implements CommandInfo {
     stdin?: Writable;
     pid?: number;
     killed = false;
+    killedByOthers = false;
     exited = false;
 
     state: CommandState = 'stopped';
@@ -230,6 +239,7 @@ export class Command implements CommandInfo {
                     index: this.index,
                     exitCode: exitCode ?? String(signal),
                     killed: this.killed,
+                    killedByOthers: this.killedByOthers,
                     timings: {
                         startDate,
                         endDate,
@@ -313,10 +323,14 @@ export class Command implements CommandInfo {
 
     /**
      * Kills this command, optionally specifying a signal to send to it.
+     *
+     * @param killedByOthers Whether another command's exit is the reason for this kill,
+     *                       as opposed to concurrently itself being stopped.
      */
-    kill(code?: string) {
+    kill(code?: string, killedByOthers = false) {
         if (Command.canKill(this)) {
             this.killed = true;
+            this.killedByOthers ||= killedByOthers;
             this.killProcess(this.pid, code);
         }
     }

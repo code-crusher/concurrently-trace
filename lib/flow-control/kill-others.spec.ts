@@ -69,7 +69,7 @@ describe.each(['success', 'failure'] as const)('on %s', (condition) => {
             'Sending SIGTERM to other processes..',
         );
         expect(commands[0].kill).not.toHaveBeenCalled();
-        expect(commands[1].kill).toHaveBeenCalledWith(undefined);
+        expect(commands[1].kill).toHaveBeenCalledWith(undefined, true);
     });
 
     it('kills other processes, with specified signal', () => {
@@ -81,7 +81,7 @@ describe.each(['success', 'failure'] as const)('on %s', (condition) => {
             'Sending SIGKILL to other processes..',
         );
         expect(commands[0].kill).not.toHaveBeenCalled();
-        expect(commands[1].kill).toHaveBeenCalledWith('SIGKILL');
+        expect(commands[1].kill).toHaveBeenCalledWith('SIGKILL', true);
     });
 
     it('sends abort signal on condition match', () => {
@@ -130,7 +130,7 @@ it('force kills misbehaving processes after a timeout', () => {
     vi.advanceTimersByTime(500);
 
     expect(commands[1].kill).toHaveBeenCalledTimes(2);
-    expect(commands[1].kill).toHaveBeenCalledWith('SIGKILL');
+    expect(commands[1].kill).toHaveBeenCalledWith('SIGKILL', true);
     expect(commands[2].kill).toHaveBeenCalledTimes(1);
 });
 
@@ -144,7 +144,7 @@ it('does not report a force kill when all processes exit before the timeout', ()
 
     vi.advanceTimersByTime(500);
 
-    expect(commands[1].kill).toHaveBeenCalledExactlyOnceWith(undefined);
+    expect(commands[1].kill).toHaveBeenCalledExactlyOnceWith(undefined, true);
     expect(logger.logGlobalEvent).toHaveBeenCalledExactlyOnceWith(
         'Sending SIGTERM to other processes..',
     );

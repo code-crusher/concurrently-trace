@@ -158,6 +158,37 @@ describe('detect commands exit conditions', () => {
 
             return expect(result).rejects.toEqual(expect.anything());
         });
+
+        it('succeeds if the failing processes were killed by --kill-others', () => {
+            // See #531: a process killed by --kill-others exits with a signal, not a code
+            const result = createController().listen(commands);
+
+            commands[0].close.next(createFakeCloseEvent({ exitCode: 0 }));
+            commands[1].close.next(
+                createFakeCloseEvent({ exitCode: 'SIGTERM', killed: true, killedByOthers: true }),
+            );
+            commands[2].close.next(
+                createFakeCloseEvent({ exitCode: 'SIGTERM', killed: true, killedByOthers: true }),
+            );
+
+            scheduler.flush();
+
+            return expect(result).resolves.toEqual(expect.anything());
+        });
+
+        it('fails if a process was killed by a signal sent to concurrently itself', () => {
+            // Unlike --kill-others, a process killed because concurrently was interrupted
+            // (e.g. Ctrl-C) must keep its exit code as-is.
+            const result = createController().listen(commands);
+
+            commands[0].close.next(createFakeCloseEvent({ exitCode: 0 }));
+            commands[1].close.next(createFakeCloseEvent({ exitCode: 'SIGTERM', killed: true }));
+            commands[2].close.next(createFakeCloseEvent({ exitCode: 0 }));
+
+            scheduler.flush();
+
+            return expect(result).rejects.toEqual(expect.anything());
+        });
     });
 
     describe('with success condition set to first', () => {
@@ -209,6 +240,23 @@ describe('detect commands exit conditions', () => {
             scheduler.flush();
 
             return expect(result).rejects.toEqual(expect.anything());
+        });
+
+        it('succeeds if the last process to exit was killed by --kill-others', () => {
+            // See #187: the processes killed by --kill-others exit last, but that's expected
+            const result = createController('last').listen(commands);
+
+            commands[1].close.next(
+                createFakeCloseEvent({ exitCode: 'SIGTERM', killed: true, killedByOthers: true }),
+            );
+            commands[0].close.next(createFakeCloseEvent({ exitCode: 0 }));
+            commands[2].close.next(
+                createFakeCloseEvent({ exitCode: 'SIGTERM', killed: true, killedByOthers: true }),
+            );
+
+            scheduler.flush();
+
+            return expect(result).resolves.toEqual(expect.anything());
         });
     });
 

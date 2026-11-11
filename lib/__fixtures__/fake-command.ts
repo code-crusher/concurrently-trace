@@ -39,6 +39,7 @@ export const createFakeCloseEvent = (overrides?: Partial<CloseEvent>): CloseEven
     command: new FakeCommand(),
     index: 0,
     killed: false,
+    killedByOthers: false,
     exitCode: 0,
     timings: {
         startDate: new Date(),

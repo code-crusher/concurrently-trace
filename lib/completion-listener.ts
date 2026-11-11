@@ -49,16 +49,21 @@ export class CompletionListener {
             return true;
         }
 
+        // A command that --kill-others killed didn't fail on its own: its exit code is the signal
+        // that terminated it. Counting that as a failure would make --kill-others always exit with
+        // an error. See #531 and #187.
+        const hasSucceeded = (event: CloseEvent) => event.killedByOthers || event.exitCode === 0;
+
         if (this.successCondition === 'first') {
-            return events[0].exitCode === 0;
+            return hasSucceeded(events[0]);
         } else if (this.successCondition === 'last') {
-            return events[events.length - 1].exitCode === 0;
+            return hasSucceeded(events[events.length - 1]);
         }
 
         const commandSyntaxMatch = this.successCondition.match(/^!?command-(.+)$/);
         if (commandSyntaxMatch == null) {
             // If not a `command-` syntax, then it's an 'all' condition or it's treated as such.
-            return events.every(({ exitCode }) => exitCode === 0);
+            return events.every(hasSucceeded);
         }
 
         // Check `command-` syntax condition.
@@ -71,14 +76,11 @@ export class CompletionListener {
         if (this.successCondition.startsWith('!')) {
             // All commands except the specified ones must exit successfully
             return events.every(
-                (event) => targetCommandsEvents.includes(event) || event.exitCode === 0,
+                (event) => targetCommandsEvents.includes(event) || hasSucceeded(event),
             );
         }
         // Only the specified commands must exit successfully
-        return (
-            targetCommandsEvents.length > 0 &&
-            targetCommandsEvents.every((event) => event.exitCode === 0)
-        );
+        return targetCommandsEvents.length > 0 && targetCommandsEvents.every(hasSucceeded);
     }
 
     /**

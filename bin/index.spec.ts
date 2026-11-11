@@ -351,6 +351,23 @@ describe('--kill-others', () => {
             ),
         );
     });
+
+    it('exits with success even though the killed process exits with a signal', async () => {
+        // The killed process exits with SIGTERM, but it didn't fail on its own,
+        // so it must not make concurrently fail. See #531.
+        const exit = await run('--kill-others "node __fixtures__/sleep.js 10" "exit 0"').exit;
+
+        expect(exit.code).toBe(0);
+    });
+
+    it('exits with success with --success=last when the killed process exits last', async () => {
+        // See #187.
+        const exit = await run(
+            '--success=last --kill-others "node __fixtures__/sleep.js 10" "exit 0"',
+        ).exit;
+
+        expect(exit.code).toBe(0);
+    });
 });
 
 describe('--kill-others-on-fail', () => {
@@ -412,7 +429,8 @@ describe('--handle-input', () => {
         const lines = await child.getLogLines();
         const exit = await child.exit;
 
-        expect(exit.code).toBeGreaterThan(0);
+        // The other process was killed by --kill-others, so it doesn't count as a failure.
+        expect(exit.code).toBe(0);
         expect(lines).toContainEqual(expect.stringContaining('[1] stop'));
         expect(lines).toContainEqual(
             expect.stringMatching(
@@ -431,7 +449,8 @@ describe('--handle-input', () => {
         const lines = await child.getLogLines();
         const exit = await child.exit;
 
-        expect(exit.code).toBeGreaterThan(0);
+        // The other process was killed by --kill-others, so it doesn't count as a failure.
+        expect(exit.code).toBe(0);
         expect(lines).toContainEqual(expect.stringContaining('[1] stop'));
         expect(lines).toContainEqual(
             expect.stringMatching(

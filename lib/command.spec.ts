@@ -472,6 +472,24 @@ describe('#kill()', () => {
 
         expect(close).toMatchObject({ exitCode: 1, killed: true });
     });
+
+    it('does not mark the command as killed by others by default', async () => {
+        createdCommand.command.start();
+        createdCommand.command.kill();
+        process.emit('close', null, 'SIGTERM');
+        const { close } = await createdCommand.values();
+
+        expect(close).toMatchObject({ killed: true, killedByOthers: false });
+    });
+
+    it('marks the command as killed by others', async () => {
+        createdCommand.command.start();
+        createdCommand.command.kill('SIGTERM', true);
+        process.emit('close', null, 'SIGTERM');
+        const { close } = await createdCommand.values();
+
+        expect(close).toMatchObject({ exitCode: 'SIGTERM', killed: true, killedByOthers: true });
+    });
 });
 
 describe('.canKill()', () => {
